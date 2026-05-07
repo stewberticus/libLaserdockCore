@@ -398,8 +398,8 @@ else()
     set(QT_MIN_VERSION 5.15)
 endif()
 
-find_package(Qt${QT_VERSION_MAJOR} ${QT_MIN_VERSION} COMPONENTS Core Gui Multimedia REQUIRED)
-target_link_libraries(${PROJECT_NAME} PUBLIC Qt::Core Qt::Gui Qt::Multimedia)
+find_package(Qt${QT_VERSION_MAJOR} ${QT_MIN_VERSION} COMPONENTS Core Gui Multimedia Qml REQUIRED)
+target_link_libraries(${PROJECT_NAME} PUBLIC Qt::Core Qt::Gui Qt::Multimedia Qt::Qml)
 
 if(LD_CORE_USE_OPENGL)
     find_package(Qt${QT_VERSION_MAJOR} ${QT_MIN_VERSION} COMPONENTS OpenGL REQUIRED)
