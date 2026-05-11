@@ -15,6 +15,7 @@ option(LD_ENABLE_QT5COMPAT "Enable Qt5Compat module" ON)
 # main app configuration
 option(LD_CORE_BUILD_EXAMPLE "Build Example" ON)
 option(LD_CORE_BUILD_TESTS "Build Tests" OFF)
+option(LD_CORE_BUILD_NETWORK_DEMO "Build network connectivity demo" OFF)
 # library flags
 option(LD_CORE_ENABLE_GAMES "Enable Games" OFF)
 option(LD_CORE_ENABLE_BOX2D "Enable Box2D" OFF)
@@ -167,6 +168,10 @@ endif()
 
 if(LD_CORE_BUILD_TESTS)
     add_subdirectory(tests)
+endif()
+
+if(LD_CORE_BUILD_NETWORK_DEMO)
+    add_subdirectory(demo)
 endif()
 
 if(CMAKE_GENERATOR STREQUAL Xcode)

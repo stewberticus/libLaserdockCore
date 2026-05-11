@@ -71,6 +71,18 @@ namespace constants{
     const int security_timeout_ms = 1000;               // how long to wait for a security response after a request was sent
 }
 
+namespace {
+
+bool bind_udp_socket(QUdpSocket* socket, int port)
+{
+    return socket->bind(
+        QHostAddress::AnyIPv4,
+        port,
+        QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
+}
+
+}
+
 
 LaserdockNetworkDevice::LaserdockNetworkDevice(QString ip_address,QObject *parent) : QObject(parent)
   ,m_hostaddr(ip_address)
@@ -78,7 +90,10 @@ LaserdockNetworkDevice::LaserdockNetworkDevice(QString ip_address,QObject *paren
   ,m_ip_address(ip_address)
 {
     m_cmdsocket = new QUdpSocket(this);
-    m_cmdsocket->bind( constants::cmd_port);
+    if (!bind_udp_socket(m_cmdsocket, constants::cmd_port)) {
+        qWarning() << "Failed to bind LaserCube command socket on port" << constants::cmd_port
+                   << "for" << m_hostaddr << ":" << m_cmdsocket->errorString();
+    }
     m_cmdsocket->setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption,5250000);
     m_cmdsocket->setSocketOption(QAbstractSocket::SendBufferSizeSocketOption,5250000);
 
@@ -89,7 +104,10 @@ LaserdockNetworkDevice::LaserdockNetworkDevice(QString ip_address,QObject *paren
 
 
     m_datasocket = new QUdpSocket(this);
-    m_datasocket->bind( constants::data_port);
+    if (!bind_udp_socket(m_datasocket, constants::data_port)) {
+        qWarning() << "Failed to bind LaserCube data socket on port" << constants::data_port
+                   << "for" << m_hostaddr << ":" << m_datasocket->errorString();
+    }
     m_datasocket->setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption,5250000);
     m_datasocket->setSocketOption(QAbstractSocket::SendBufferSizeSocketOption,5250000);
 
@@ -234,7 +252,13 @@ bool LaserdockNetworkDevice::RequestDeviceAlive(QUdpSocket& skt)
 // configure the referenced socket to be able to receive device info responses
 bool LaserdockNetworkDevice::ConfigDeviceAliveRequestSocket(QUdpSocket& skt)
 {
-    skt.bind(QHostAddress::AnyIPv4,constants::alive_port);
+    if (!skt.bind(QHostAddress::AnyIPv4,
+                  constants::alive_port,
+                  QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)) {
+        qWarning() << "Failed to bind LaserCube alive socket on port" << constants::alive_port
+                   << ":" << skt.errorString();
+        return false;
+    }
     skt.setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption,2250000);
     return true;
 }
