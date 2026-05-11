@@ -638,6 +638,7 @@ bool LaserdockNetworkDevice::enable_output() {
     send_command(en_pkt,sizeof(en_pkt),true);
     m_outputenabled = true;
     m_queue.clear();
+    m_elapsed_timer.start(); // valid baseline for processSamples() consumption estimate
     m_timer.start(constants::active_info_request_period_ms); // periodic timer for requesting full info from the network cube
 
     return true;
@@ -910,18 +911,24 @@ void LaserdockNetworkDevice::processSamples()
     unsigned int count = static_cast<unsigned int>(m_queue.size());
 
 
-    quint64 samples_gone = m_elapsed_timer.elapsed() * 30; // get num ms since last process and convert to num samples that will have been rendered in cube since last time.
-    if (samples_gone>0){
-        m_elapsed_timer.start();
-        uint16_t bufsz = m_buffer_size;
+    // Interpolate how many samples the DAC consumed since the last send. Only
+    // run this when we know the ring buffer size from GET_FULL_INFO — if
+    // m_buffer_size is still 0, treating bufsz as 0 used to execute
+    // `m_buffer_free = bufsz` and zero out a valid buf_free from the last
+    // status packet, which prevents any 0xA9 data datagrams from being sent
+    // (while the 0x77 poll timer keeps firing).
+    const uint16_t bufsz = m_buffer_size.load();
+    if (bufsz > 0) {
+        quint64 samples_gone = m_elapsed_timer.elapsed() * 30; // ms * 30 ≈ samples @ ~30kHz
+        if (samples_gone > 0) {
+            m_elapsed_timer.start();
 
-        if (samples_gone>bufsz) {
-            m_buffer_free = bufsz;
-        } else {
-            m_buffer_free+=samples_gone; // we can pre-calc how many samples were rendered by the cube since the last time we sent samples
-            if (m_buffer_free>bufsz) m_buffer_free = bufsz;
-           // uint16_t s = samples_gone;
-           // if (s>0) qDebug() << "samples gone since last call:" << s;
+            if (samples_gone > bufsz) {
+                m_buffer_free = bufsz;
+            } else {
+                m_buffer_free += static_cast<uint16_t>(samples_gone);
+                if (m_buffer_free > bufsz) m_buffer_free = bufsz;
+            }
         }
     }
 
